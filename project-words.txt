@@ -18,6 +18,7 @@ kardia
 mixedcase
 moonriver
 nomiclabs
+opengsn
 prettierignore
 reentrancy
 snakecase
