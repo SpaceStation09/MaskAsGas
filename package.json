@@ -10,12 +10,18 @@
     "deploy": "hardhat deploy --network",
     "format": "prettier --write ./"
   },
+  "overrides": {
+    "@opengsn/cli": {
+      "@truffle/hdwallet-provider": "^2.0.4"
+    }
+  },
   "devDependencies": {
     "@dimensiondev/eslint-plugin": "^0.0.2-20220516081411-2649814",
     "@nomiclabs/hardhat-ethers": "^2.0.6",
     "@nomiclabs/hardhat-etherscan": "^3.0.4",
     "@nomiclabs/hardhat-solhint": "^2.0.1",
     "@nomiclabs/hardhat-waffle": "^2.0.3",
+    "@opengsn/cli": "^2.2.6",
     "@typechain/ethers-v5": "^10.0.0",
     "@typechain/hardhat": "^6.0.0",
     "@types/chai-as-promised": "^7.1.5",
