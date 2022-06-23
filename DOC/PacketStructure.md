@@ -1,4 +1,4 @@
-# Data Distribution in Packet
+# Data Distribution in RedPacket
 
 ## Packed1
 
