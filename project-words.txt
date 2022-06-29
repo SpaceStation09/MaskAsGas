@@ -19,6 +19,8 @@ mixedcase
 moonriver
 nomiclabs
 opengsn
+precharge
+precharged
 prettierignore
 reentrancy
 snakecase

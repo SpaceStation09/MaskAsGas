@@ -46,6 +46,10 @@ contract RedPacket is Initializable, BaseRelayRecipient {
         seed = keccak256(abi.encodePacked("Former NBA Commissioner David St", block.timestamp, _msgSender()));
     }
 
+    function setForwarder(address forwarder) public {
+        _setTrustedForwarder(forwarder);
+    }
+
     function createRedPacket(
         address _publicKey,
         uint256 _number,
