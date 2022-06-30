@@ -1,6 +1,5 @@
 //SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
-pragma experimental ABIEncoderV2;
 
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
@@ -65,7 +64,7 @@ contract MaskPayMaster is BasePaymaster {
         bytes calldata signature,
         bytes calldata approvalData,
         uint256 maxPossibleGas
-    ) external relayHubOnly returns (bytes memory context, bool revertOnRecipientRevert) {
+    ) external override relayHubOnly returns (bytes memory context, bool revertOnRecipientRevert) {
         (signature, approvalData);
         (IERC20 payToken, IUniswapV2Pair decodedUniswapPair) = _getToken(relayRequest.relayData.paymasterData);
         (address payer, uint256 tokenPrecharge) = _calculatePrecharge(
@@ -96,7 +95,7 @@ contract MaskPayMaster is BasePaymaster {
         bool success,
         uint256 gasUseWithoutPost,
         GsnTypes.RelayData calldata relayData
-    ) external relayHubOnly {
+    ) external override relayHubOnly {
         (success);
         (address payer, uint256 tokenPrecharge, IERC20 payToken, IUniswapV2Pair decodedUniswapPair) = abi.decode(
             context,

@@ -8,6 +8,7 @@ import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import "@opengsn/contracts/src/BaseRelayRecipient.sol";
 
 contract RedPacket is Initializable, BaseRelayRecipient {
+    using SafeERC20Upgradeable for IERC20Upgradeable;
     struct Packet {
         DataPack packed;
         mapping(address => uint256) claimedList;
@@ -40,9 +41,8 @@ contract RedPacket is Initializable, BaseRelayRecipient {
     event ClaimSuccess(bytes32 id, address claimer, uint256 claimedValue, address tokenAddress);
     event RefundSuccess(bytes32 id, address tokenAddress, uint256 remainingBalance);
 
-    using SafeERC20Upgradeable for IERC20Upgradeable;
-
-    function initialize() public initializer {
+    function initialize(address _forwarder) public initializer {
+        _setTrustedForwarder(_forwarder);
         seed = keccak256(abi.encodePacked("Former NBA Commissioner David St", block.timestamp, _msgSender()));
     }
 
