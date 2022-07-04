@@ -1,6 +1,6 @@
 // reference: https://github.com/qbzzt/opengsn/blob/master/01_SimpleUse/test/testcontracts.js
 import { ethers, upgrades } from "hardhat";
-import { BigNumber, Signer, utils, providers, Contract } from "ethers";
+import { BigNumber, Signer, utils, providers, Contract, Wallet } from "ethers";
 import { RelayProvider } from "@opengsn/provider";
 import { GsnTestEnvironment } from "@opengsn/dev";
 import { use } from "chai";
@@ -15,7 +15,7 @@ import paymasterAddr from "../build/gsn/Paymaster.json";
 
 describe("GSN basic testing", () => {
   let contractCreator: Signer;
-
+  let acct: Wallet;
   let targetContract: Contract;
   let paymasterContract: Contract;
 
@@ -46,7 +46,10 @@ describe("GSN basic testing", () => {
     let conf = { paymasterAddress: paymasterContract.address };
     const web3provider: any = new Web3HttpProvider("http://localhost:8545");
     let gsnProvider = await RelayProvider.newProvider({ provider: web3provider, config: conf }).init();
+    acct = ethers.Wallet.createRandom();
+    gsnProvider.addAccount(acct.privateKey);
     provider = new ethers.providers.Web3Provider(gsnProvider);
+
     let tx = await contractCreator.sendTransaction({
       to: paymasterAddr.address,
       value: utils.parseEther("1.0"), // Sends exactly 1.0 ether
@@ -54,11 +57,14 @@ describe("GSN basic testing", () => {
   });
 
   it("setups", async () => {
-    let acct = ethers.Wallet.createRandom(provider);
+    // let acct = ethers.Wallet.createRandom();
+    // gsnProvider.addAccount(acct.privateKey);
+    // let acct = ethers.Wallet.createRandom(provider);
     acct = new ethers.Wallet(acct.privateKey, provider);
 
     expect(await acct.getBalance()).to.be.eq(BigNumber.from(0));
-    await targetContract.connect(acct).captureFlag();
+    targetContract.connect(provider.getSigner(acct.address));
+    await targetContract.captureFlag();
   });
 
   // it("setups", async () => {
