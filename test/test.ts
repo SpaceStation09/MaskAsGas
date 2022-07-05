@@ -57,9 +57,6 @@ describe("GSN basic testing", () => {
   });
 
   it("setups", async () => {
-    // let acct = ethers.Wallet.createRandom();
-    // gsnProvider.addAccount(acct.privateKey);
-    // let acct = ethers.Wallet.createRandom(provider);
     acct = new ethers.Wallet(acct.privateKey, provider);
 
     expect(await acct.getBalance()).to.be.eq(BigNumber.from(0));
