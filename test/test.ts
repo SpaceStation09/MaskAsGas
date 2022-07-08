@@ -1,122 +1,117 @@
 // reference: https://github.com/qbzzt/opengsn/blob/master/01_SimpleUse/test/testcontracts.js
-import { ethers, upgrades } from "hardhat";
-import { BigNumber, Signer, utils, providers, Contract, Wallet } from "ethers";
-import { RelayProvider } from "@opengsn/provider";
 import { GsnTestEnvironment } from "@opengsn/dev";
+import { RelayProvider } from "@opengsn/provider";
 import { use } from "chai";
 import chaiAsPromised from "chai-as-promised";
+import { constants, providers, Signer, utils, Wallet } from "ethers";
+import { ethers, waffle } from "hardhat";
+import { ftCreationParam } from "./constants";
+import { revertToSnapShot, takeSnapshot } from "./helper";
+import { setUpUniswap } from "./setUpUniswap";
 const { expect } = use(chaiAsPromised);
 const Web3HttpProvider = require("web3-providers-http");
+const { deployContract } = waffle;
 
-import redPacketArtifact from "../artifacts/contracts/RedPacket.sol/RedPacket.json";
-import paymasterAddr from "../build/gsn/Paymaster.json";
-// import forwarderAddr from "../build/gsn/Forwarder.json";
-// import relayHubrAddr from "../build/gsn/RelayHub.json";
+import MaskArtifact from "../artifacts/contracts/Mask.sol/MaskToken.json";
+import PaymasterArtifact from "../artifacts/contracts/payMaster.sol/MaskPayMaster.json";
+import RedPacketArtifact from "../artifacts/contracts/RedPacket.sol/RedPacket.json";
+import WETHArtifact from "../artifacts/contracts/WETH.sol/WETH9.json";
+import { MaskPayMaster, MaskToken, RedPacket, UniswapV2Router02, WETH9 } from "../types";
 
-describe("RedPacket testing", () => {
+describe("GSN basic testing", () => {
   let contractCreator: Signer;
-  let signer2: Signer;
-  let acct: Wallet;
-  let targetContract: Contract;
-  let paymasterContract: Contract;
-  let maskToken: Contract;
-  let weth: Contract;
-  let router: Contract;
+  let creatorAddress: string;
+  let testUniswapAcc: Signer;
+  let testUniAddress: string;
 
+  let redpacket: RedPacket;
+  let paymaster: MaskPayMaster;
+  let Mask: MaskToken;
+  let Weth: WETH9;
   let pair: string;
+  let router: UniswapV2Router02;
 
-  let provider: providers.Web3Provider;
+  let etherProvider: providers.Web3Provider;
+  let gsnProvider: RelayProvider;
+  let caller: string;
+  let snapshotId: string;
 
   before(async () => {
-    let signers = await ethers.getSigners();
-    contractCreator = signers[0];
-    signer2 = signers[1];
-
-    // uniswap
-    maskToken = await deployContract("MaskToken");
-    weth = await deployContract("WETH9");
-    await weth.deposit({ value: utils.parseEther("600") });
-    let factory = await deployContract("UniswapV2Factory", await contractCreator.getAddress());
-    router = await deployContract("UniswapV2Router02", factory.address, weth.address);
-
-    await maskToken.approve(router.address, utils.parseEther("300"));
-    await weth.approve(router.address, utils.parseEther("300"));
-
-    await router.addLiquidity(
-      maskToken.address,
-      weth.address,
-      utils.parseEther("100"),
-      utils.parseEther("100"),
-      0,
-      0,
-      await contractCreator.getAddress(),
-      Math.floor(Date.now() / 1000) + 1800,
-    );
-    pair = await factory.getPair(maskToken.address, weth.address);
-    expect(await maskToken.balanceOf(pair)).to.be.eq(utils.parseEther("100"));
-    expect(await weth.balanceOf(pair)).to.be.eq(utils.parseEther("100"));
-
-    // GSN
     let env = await GsnTestEnvironment.startGsn("localhost");
     const { forwarderAddress, relayHubAddress } = env.contractsDeployment;
+    if (!forwarderAddress || !relayHubAddress) throw "gsn start failed";
+    const web3provider = new Web3HttpProvider("http://localhost:8545");
+    const deploymentProvider = new ethers.providers.Web3Provider(web3provider);
+    contractCreator = deploymentProvider.getSigner();
+    testUniswapAcc = deploymentProvider.getSigner(1);
+    creatorAddress = await contractCreator.getAddress();
+    testUniAddress = await testUniswapAcc.getAddress();
 
-    // const factory = await ethers.getContractFactory("RedPacket");
-    // const proxy = await upgrades.deployProxy(factory, [forwarderAddress], { unsafeAllow: ["delegatecall"] });
-    // targetContract = new ethers.Contract(proxy.address, redPacketArtifact.abi, contractCreator);
+    redpacket = (await deployContract(contractCreator, RedPacketArtifact)) as RedPacket;
+    paymaster = (await deployContract(contractCreator, PaymasterArtifact)) as MaskPayMaster;
+    Mask = (await deployContract(contractCreator, MaskArtifact)) as MaskToken;
+    Weth = (await deployContract(contractCreator, WETHArtifact)) as WETH9;
 
-    const ctfFactory = await ethers.getContractFactory("CaptureTheFlag");
-    targetContract = await ctfFactory.deploy(forwarderAddress);
-    await targetContract.deployed();
-    const paymasterFactory = await ethers.getContractFactory("AcceptAllPayMaster");
-    paymasterContract = await paymasterFactory.deploy();
-    await paymasterContract.deployed();
+    await Weth.deposit({ value: utils.parseEther("600") });
+    const uniswapSet = await setUpUniswap(contractCreator, Mask, Weth);
+    pair = uniswapSet.pair;
+    router = uniswapSet.router;
 
-    await paymasterContract.setTarget(targetContract.address);
-    await paymasterContract.setRelayHub(relayHubAddress);
-    await paymasterContract.setTrustedForwarder(forwarderAddress);
-    // if only paying for whitelisted contracts
-    // await paymasterContract.setTarget(redPacketContract.address);
-    let conf = { paymasterAddress: paymasterContract.address };
-    const web3provider: any = new Web3HttpProvider("http://localhost:8545");
-    let gsnProvider = await RelayProvider.newProvider({ provider: web3provider, config: conf }).init();
-    acct = ethers.Wallet.createRandom();
-    gsnProvider.addAccount(acct.privateKey);
-    provider = new ethers.providers.Web3Provider(gsnProvider);
+    await paymaster.setTarget(redpacket.address);
+    await paymaster.setRelayHub(relayHubAddress);
+    await paymaster.setTrustedForwarder(forwarderAddress);
 
-    let tx = await contractCreator.sendTransaction({
-      to: paymasterAddr.address,
-      value: utils.parseEther("1.0"), // Sends exactly 1.0 ether
+    let conf = { paymasterAddress: paymaster.address };
+    gsnProvider = await RelayProvider.newProvider({
+      provider: web3provider,
+      config: conf,
+    }).init();
+
+    await contractCreator.sendTransaction({
+      to: paymaster.address,
+      value: utils.parseEther("1.0"),
     });
+
+    etherProvider = new ethers.providers.Web3Provider(gsnProvider);
   });
 
-  it("uniswap", async () => {
-    await maskToken.transfer(await signer2.getAddress(), utils.parseEther("100"));
-    expect(await maskToken.balanceOf(await signer2.getAddress())).to.be.eq(utils.parseEther("100"));
-    await maskToken.connect(signer2).approve(pair, ethers.constants.MaxUint256);
-    await maskToken.connect(signer2).approve(router.address, ethers.constants.MaxUint256);
+  beforeEach(async () => {
+    snapshotId = await takeSnapshot();
+  });
+
+  afterEach(async () => {
+    await revertToSnapShot(snapshotId);
+  });
+
+  it("test uniswap works fine", async () => {
+    await Mask.transfer(testUniAddress, utils.parseEther("100"));
+    expect(await Mask.balanceOf(testUniAddress)).to.be.eq(utils.parseEther("100"));
+
+    await Mask.connect(testUniswapAcc).approve(pair, constants.MaxUint256);
+    await Mask.connect(testUniswapAcc).approve(router.address, constants.MaxUint256);
+
     await router
-      .connect(signer2)
-      .swapTokensForExactTokens(
+      .connect(testUniswapAcc)
+      .swapTokensForExactETH(
         utils.parseEther("10"),
-        ethers.constants.MaxUint256,
-        [maskToken.address, weth.address],
-        await signer2.getAddress(),
+        constants.MaxUint256,
+        [Mask.address, Weth.address],
+        testUniAddress,
         Math.floor(Date.now() / 1000) + 1800,
       );
-    expect(await weth.balanceOf(await signer2.getAddress())).to.be.eq(utils.parseEther("10"));
+
+    expect(await Weth.balanceOf(testUniAddress)).to.be.eq(utils.parseEther("10"));
   });
 
-  it("GSN", async () => {
-    acct = new ethers.Wallet(acct.privateKey, provider);
-    expect(await acct.getBalance()).to.be.eq(BigNumber.from(0));
-    targetContract.connect(provider.getSigner(acct.address));
-    await targetContract.captureFlag();
+  it("Create redpacket works fine", async () => {
+    let empty_acct = Wallet.createRandom();
+    redpacket = connectContract(empty_acct);
+    redpacket.createRedPacket.apply(null, Object.values(ftCreationParam));
   });
+
+  const connectContract = (acct: Wallet): RedPacket => {
+    gsnProvider.addAccount(acct.privateKey);
+    caller = acct.address;
+    return redpacket.connect(etherProvider.getSigner(caller));
+  };
 });
-
-async function deployContract(_name, ..._args): Promise<Contract> {
-  let contractFactory = await ethers.getContractFactory(_name);
-  let contractObject = await contractFactory.deploy(..._args);
-  await contractObject.deployed();
-  return contractObject;
-}

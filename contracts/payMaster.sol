@@ -1,5 +1,6 @@
 //SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
+pragma experimental ABIEncoderV2;
 
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
@@ -14,10 +15,13 @@ contract MaskPayMaster is BasePaymaster {
     IUniswapV2Router public uniswapRouter;
     IERC20 public mask;
     IERC20 public weth;
+    address public ourTarget; // The target contract we are willing to pay for
 
     uint256 public gasUsedByPost;
 
     event Received(uint256 ethAmount);
+    // allow the owner to set ourTarget
+    event TargetSet(address target);
     event TokensCharged(
         uint256 gasUsedWithoutPost,
         uint256 gasOnlyPost,
@@ -39,6 +43,11 @@ contract MaskPayMaster is BasePaymaster {
 
     receive() external payable override {
         emit Received(msg.value);
+    }
+
+    function setTarget(address target) external onlyOwner {
+        ourTarget = target;
+        emit TargetSet(target);
     }
 
     /**
@@ -66,6 +75,7 @@ contract MaskPayMaster is BasePaymaster {
         uint256 maxPossibleGas
     ) external override relayHubOnly returns (bytes memory context, bool revertOnRecipientRevert) {
         (signature, approvalData);
+        require(relayRequest.request.to == ourTarget, "Not supported contract");
         (IERC20 payToken, IUniswapV2Pair decodedUniswapPair) = _getToken(relayRequest.relayData.paymasterData);
         (address payer, uint256 tokenPrecharge) = _calculatePrecharge(
             payToken,
