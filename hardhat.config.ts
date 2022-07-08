@@ -7,6 +7,7 @@ import "hardhat-gas-reporter";
 import "@typechain/hardhat";
 import "@nomiclabs/hardhat-etherscan";
 import "hardhat-abi-exporter";
+import "@openzeppelin/hardhat-upgrades";
 import { HardhatUserConfig } from "hardhat/config";
 import {
   getHardhatNetworkConfig,
