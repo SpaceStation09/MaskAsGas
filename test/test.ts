@@ -4,19 +4,18 @@ import { RelayProvider } from "@opengsn/provider";
 import { use } from "chai";
 import chaiAsPromised from "chai-as-promised";
 import { constants, providers, Signer, utils, Wallet } from "ethers";
-import { ethers, waffle } from "hardhat";
+import { ethers, upgrades, waffle } from "hardhat";
+import MaskArtifact from "../artifacts/contracts/Mask.sol/MaskToken.json";
+import PaymasterArtifact from "../artifacts/contracts/payMaster.sol/MaskPayMaster.json";
+import RedPacketArtifact from "../artifacts/contracts/RedPacket.sol/RedPacket.json";
+import WETHArtifact from "../artifacts/contracts/WETH.sol/WETH9.json";
+import { MaskPayMaster, MaskToken, RedPacket, UniswapV2Router02, WETH9 } from "../types";
 import { ftCreationParam } from "./constants";
 import { revertToSnapShot, takeSnapshot } from "./helper";
 import { setUpUniswap } from "./setUpUniswap";
 const { expect } = use(chaiAsPromised);
 const Web3HttpProvider = require("web3-providers-http");
 const { deployContract } = waffle;
-
-import MaskArtifact from "../artifacts/contracts/Mask.sol/MaskToken.json";
-import PaymasterArtifact from "../artifacts/contracts/payMaster.sol/MaskPayMaster.json";
-import RedPacketArtifact from "../artifacts/contracts/RedPacket.sol/RedPacket.json";
-import WETHArtifact from "../artifacts/contracts/WETH.sol/WETH9.json";
-import { MaskPayMaster, MaskToken, RedPacket, UniswapV2Router02, WETH9 } from "../types";
 
 describe("GSN basic testing", () => {
   let contractCreator: Signer;
@@ -47,17 +46,23 @@ describe("GSN basic testing", () => {
     creatorAddress = await contractCreator.getAddress();
     testUniAddress = await testUniswapAcc.getAddress();
 
-    redpacket = (await deployContract(contractCreator, RedPacketArtifact)) as RedPacket;
-    paymaster = (await deployContract(contractCreator, PaymasterArtifact)) as MaskPayMaster;
     Mask = (await deployContract(contractCreator, MaskArtifact)) as MaskToken;
     Weth = (await deployContract(contractCreator, WETHArtifact)) as WETH9;
-
     await Weth.deposit({ value: utils.parseEther("600") });
     const uniswapSet = await setUpUniswap(contractCreator, Mask, Weth);
     pair = uniswapSet.pair;
     router = uniswapSet.router;
 
-    await paymaster.setTarget(redpacket.address);
+    const factory = await ethers.getContractFactory("RedPacket");
+    const proxy = await upgrades.deployProxy(factory, [forwarderAddress], { unsafeAllow: ["delegatecall"] });
+    redpacket = new ethers.Contract(proxy.address, RedPacketArtifact.abi, contractCreator) as RedPacket;
+    // redpacket = (await deployContract(contractCreator, RedPacketArtifact)) as RedPacket;
+    paymaster = (await deployContract(contractCreator, PaymasterArtifact, [
+      pair,
+      Mask.address,
+      Weth.address,
+      router.address,
+    ])) as MaskPayMaster;
     await paymaster.setRelayHub(relayHubAddress);
     await paymaster.setTrustedForwarder(forwarderAddress);
 
@@ -87,19 +92,16 @@ describe("GSN basic testing", () => {
     await Mask.transfer(testUniAddress, utils.parseEther("100"));
     expect(await Mask.balanceOf(testUniAddress)).to.be.eq(utils.parseEther("100"));
 
-    await Mask.connect(testUniswapAcc).approve(pair, constants.MaxUint256);
     await Mask.connect(testUniswapAcc).approve(router.address, constants.MaxUint256);
-
     await router
       .connect(testUniswapAcc)
-      .swapTokensForExactETH(
+      .swapTokensForExactTokens(
         utils.parseEther("10"),
         constants.MaxUint256,
         [Mask.address, Weth.address],
         testUniAddress,
         Math.floor(Date.now() / 1000) + 1800,
       );
-
     expect(await Weth.balanceOf(testUniAddress)).to.be.eq(utils.parseEther("10"));
   });
 
