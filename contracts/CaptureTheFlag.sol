@@ -8,7 +8,7 @@ contract CaptureTheFlag is BaseRelayRecipient {
 
     event FlagCaptured(address _from, address _to);
 
-    address flagHolder = address(0);
+    address public flagHolder = address(0);
 
     // Get the forwarder address for the network
     // you are using from

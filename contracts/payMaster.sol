@@ -109,7 +109,7 @@ contract MaskPayMaster is BasePaymaster {
     }
 
     function versionPaymaster() external view virtual override returns (string memory) {
-        return "1.0.0-Mask.paymaster";
+        return "2.2.0";
     }
 
     function _getToken(bytes memory paymasterData)
