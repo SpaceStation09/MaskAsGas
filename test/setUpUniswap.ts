@@ -1,4 +1,4 @@
-import { Signer, utils } from "ethers";
+import { constants, Signer, utils } from "ethers";
 import { waffle } from "hardhat";
 const { deployContract } = waffle;
 
@@ -20,14 +20,14 @@ export const setUpUniswap = async (contractCreator: Signer, Mask: MaskToken, Wet
     Weth.address,
   ])) as UniswapV2Router02;
 
-  await Mask.approve(router.address, utils.parseEther("300"));
-  await Weth.approve(router.address, utils.parseEther("300"));
+  await Mask.approve(router.address, utils.parseEther("200"));
+  await Weth.approve(router.address, utils.parseEther("20"));
 
   await router.addLiquidity(
     Mask.address,
     Weth.address,
-    utils.parseEther("100"),
-    utils.parseEther("100"),
+    utils.parseEther("200"),
+    utils.parseEther("20"),
     0,
     0,
     creatorAddress,
@@ -39,4 +39,19 @@ export const setUpUniswap = async (contractCreator: Signer, Mask: MaskToken, Wet
     router,
     pair,
   };
+};
+
+export const setUpMask = async (
+  contractCreator: Signer,
+  testAccount: Signer,
+  Mask: MaskToken,
+  paymasterAddress: string,
+) => {
+  const testAddress = await testAccount.getAddress();
+  await Mask.connect(contractCreator).transfer(testAddress, utils.parseEther("1000"));
+  await contractCreator.sendTransaction({
+    to: testAddress,
+    value: utils.parseEther("0.0005"),
+  });
+  await Mask.connect(testAccount).approve(paymasterAddress, constants.MaxUint256);
 };

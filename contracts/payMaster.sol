@@ -42,6 +42,8 @@ contract MaskPayMaster is BasePaymaster {
     }
 
     receive() external payable override {
+        require(address(relayHub) != address(0), "relay hub address not set");
+        relayHub.depositFor{value: msg.value}(address(this));
         emit Received(msg.value);
     }
 
@@ -75,6 +77,7 @@ contract MaskPayMaster is BasePaymaster {
         uint256 maxPossibleGas
     ) external override relayHubOnly returns (bytes memory context, bool revertOnRecipientRevert) {
         (signature, approvalData);
+        _verifyForwarder(relayRequest);
         require(relayRequest.request.to == ourTarget, "Not supported contract");
         (IERC20 payToken, IUniswapV2Pair decodedUniswapPair) = _getToken(relayRequest.relayData.paymasterData);
         (address payer, uint256 tokenPrecharge) = _calculatePrecharge(
@@ -115,7 +118,7 @@ contract MaskPayMaster is BasePaymaster {
     }
 
     function getPayer(GsnTypes.RelayRequest calldata relayRequest) external view virtual returns (address) {
-        return relayRequest.request.to;
+        return relayRequest.request.from;
     }
 
     function versionPaymaster() external view virtual override returns (string memory) {
@@ -127,8 +130,12 @@ contract MaskPayMaster is BasePaymaster {
         view
         returns (IERC20 payToken, IUniswapV2Pair decodedUniswapPair)
     {
-        decodedUniswapPair = abi.decode(paymasterData, (IUniswapV2Pair));
-        require(decodedUniswapPair == uniswapPair, "Unsupported uniswap router");
+        if (paymasterData.length != 0) {
+            decodedUniswapPair = abi.decode(paymasterData, (IUniswapV2Pair));
+            require(decodedUniswapPair == uniswapPair, "Unsupported uniswap router");
+        } else {
+            decodedUniswapPair = uniswapPair;
+        }
         payToken = IERC20(decodedUniswapPair.token1());
         require(payToken == mask, "Unsupported pay token");
     }

@@ -42,3 +42,9 @@ As described in [GSN DOC](https://docs.opengsn.org/contracts/#paying-for-your-us
   - `Paymaster` calculate the amount of $MASK to pay actual gas fee that needs to be charged by client.
   - Then, `Paymaster` refund unused $MASK to client.
   - `Paymaster` interact with Uniswap contracts to swap $MASK for $ETH and then, refund relayHub in $ETH.
+
+## Current Questions
+
+![Time Sequence](TimeSequence.jpeg)
+
+In the above diagram, I noted some points which we need to think and treat it carefully. If there is any idea about it, we may have a discussion. You can contact me at rocket chat.

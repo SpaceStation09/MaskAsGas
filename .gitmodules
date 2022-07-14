@@ -1,3 +1,4 @@
 [submodule "SmartContractProjectConfig"]
 	path = SmartContractProjectConfig
 	url = git@github.com:DimensionDev/SmartContractProjectConfig.git
+  branch = MaskAsGas
