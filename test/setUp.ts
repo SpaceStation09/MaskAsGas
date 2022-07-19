@@ -20,18 +20,16 @@ export const setUpUniswap = async (contractCreator: Signer, Mask: MaskToken, Wet
     Weth.address,
   ])) as UniswapV2Router02;
 
-  await Mask.approve(router.address, utils.parseEther("200"));
-  await Weth.approve(router.address, utils.parseEther("20"));
+  await Mask.approve(router.address, utils.parseEther("1000"));
 
-  await router.addLiquidity(
+  await router.addLiquidityETH(
     Mask.address,
-    Weth.address,
-    utils.parseEther("200"),
-    utils.parseEther("20"),
+    utils.parseEther("1000"),
     0,
     0,
     creatorAddress,
     Math.floor(Date.now() / 1000) + 1800,
+    { value: utils.parseEther("1000") },
   );
   const pair = await factory.getPair(Mask.address, Weth.address);
   return {

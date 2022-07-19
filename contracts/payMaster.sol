@@ -6,6 +6,7 @@ import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 import "@opengsn/contracts/src/BasePaymaster.sol";
+import "@opengsn/contracts/src/interfaces/IPaymaster.sol";
 
 import "./interfaces/IUniswapV2Router.sol";
 import "./interfaces/IUniswapV2Pair.sol";
@@ -59,6 +60,17 @@ contract MaskPayMaster is BasePaymaster {
         gasUsedByPost = _gasUsedByPost;
     }
 
+    function getGasAndDataLimits() public view virtual override returns (IPaymaster.GasAndDataLimits memory limits) {
+        uint256 newPostRelayedCallGasLimit = 300000;
+        return
+            IPaymaster.GasAndDataLimits(
+                PAYMASTER_ACCEPTANCE_BUDGET,
+                PRE_RELAYED_CALL_GAS_LIMIT,
+                newPostRelayedCallGasLimit,
+                CALLDATA_SIZE_LIMIT
+            );
+    }
+
     /**
      * Use this func to make the decision whether to pay for a transaction or no
      * The `rejectOnRecipientRevert` value that the function returns
@@ -87,7 +99,7 @@ contract MaskPayMaster is BasePaymaster {
             maxPossibleGas
         );
         payToken.transferFrom(payer, address(this), tokenPrecharge);
-        return (abi.encode(payer, tokenPrecharge, payToken, decodedUniswapPair), false);
+        return (abi.encode(payer, tokenPrecharge, payToken, decodedUniswapPair), true);
     }
 
     /**
@@ -166,7 +178,7 @@ contract MaskPayMaster is BasePaymaster {
         IERC20 payToken,
         IUniswapV2Pair decodedUniswapPair
     ) internal {
-        uint256 ethActualCharge = relayHub.calculateCharge(gasUsedWithoutPost + gasUsedByPost, relayData);
+        uint256 ethActualCharge = relayHub.calculateCharge(gasUsedWithoutPost, relayData);
         // reserve0: ETH, reserve1: MASK
         (uint112 reserve0, uint112 reserve1, ) = decodedUniswapPair.getReserves();
         //TODO: Check the token order
@@ -188,13 +200,15 @@ contract MaskPayMaster is BasePaymaster {
         address[] memory path = new address[](2);
         path[0] = address(mask);
         path[1] = address(weth);
+
+        //FIXME: Unsafe! Take Care!
+        mask.approve(address(uniswapRouter), type(uint256).max);
         uniswapRouter.swapTokensForExactETH(
             ethActualCharge,
             type(uint256).max,
             path,
             address(this),
-            block.timestamp + 60 * 15
+            block.timestamp + 1800
         );
-        relayHub.depositFor{value: ethActualCharge}(address(this));
     }
 }
