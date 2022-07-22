@@ -1,0 +1,23 @@
+<html>
+  <head>
+    <title>GSNv2 Test</title>
+
+    <script src="bundle.js"></script>
+  </head>
+  <body>
+    <h2>GSNv2 Test App</h2>
+    <h3>Current Holder:</h3>
+    <p id="holderAddr">0x123</p>
+    <h3>Balance of Mask:</h3>
+    <p id="maskBal">0x123</p>
+    <script>
+      window.app.initContract().then(console.log("completed"));
+    </script>
+
+    <button id="capture_button" onClick="window.app.contractCall()">Capture the flag</button>
+    <button id="test" onClick="window.app.test()">Test</button>
+
+    <hr />
+    <div id="logview"></div>
+  </body>
+</html>

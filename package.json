@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "license": "MIT",
   "scripts": {
+    "ui": "npx hardhat test test/demoSetup.ts --network localhost && npx browserify ./ui/index.js > ./ui/bundle.js",
     "test": "hardhat test --network localhost",
     "coverage": "hardhat coverage",
     "lint": "hardhat check",
@@ -31,6 +32,7 @@
     "@types/prettier": "^2.4.4",
     "@typescript-eslint/eslint-plugin": "^5.20.0",
     "@typescript-eslint/parser": "^5.20.0",
+    "browserify": "^17.0.0",
     "chai": "^4.3.6",
     "chai-as-promised": "^7.1.1",
     "cspell": "^6.1.1",
