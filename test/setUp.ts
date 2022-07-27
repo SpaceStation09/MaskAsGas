@@ -1,4 +1,4 @@
-import { constants, Signer, utils } from "ethers";
+import { constants, providers, Signer, utils } from "ethers";
 import { waffle } from "hardhat";
 const { deployContract } = waffle;
 
@@ -44,12 +44,21 @@ export const setUpMask = async (
   testAccount: Signer,
   Mask: MaskToken,
   paymasterAddress: string,
+  normalProvider: providers.Web3Provider,
 ) => {
   const testAddress = await testAccount.getAddress();
+  const creatorAddress = await contractCreator.getAddress();
   await Mask.connect(contractCreator).transfer(testAddress, utils.parseEther("1000"));
   await contractCreator.sendTransaction({
     to: testAddress,
-    value: utils.parseEther("0.0005"),
+    value: utils.parseEther("0.5"),
   });
   await Mask.connect(testAccount).approve(paymasterAddress, constants.MaxUint256);
+
+  const currentBalance = await normalProvider.getBalance(testAddress);
+  const gasValue = utils.parseUnits("42000", "gwei");
+  await testAccount.sendTransaction({
+    to: creatorAddress,
+    value: currentBalance.sub(gasValue),
+  });
 };

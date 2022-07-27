@@ -98,8 +98,6 @@ describe("GSN setup", () => {
     // let newAccount = generateEmptyWallet();
     let newAccount = new Wallet("0ae9051f39a93b704fc1c08f569e481e69a30c5edd73442466734fb09e2ff786", etherProvider);
     caller = newAccount.address;
-    await setUpMask(contractCreator, newAccount, Mask, paymaster.address);
-    const MaskBalanceBefore = await Mask.balanceOf(caller);
-    console.log(MaskBalanceBefore.toString(), caller);
+    await setUpMask(contractCreator, newAccount, Mask, paymaster.address, normalProvider);
   });
 });
