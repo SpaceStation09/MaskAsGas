@@ -102,7 +102,7 @@ describe("GSN basic testing", () => {
   it("Test capture the flag works fine", async () => {
     let newAccount = generateEmptyWallet();
     caller = newAccount.address;
-    await setUpMask(contractCreator, newAccount, Mask, paymaster.address);
+    await setUpMask(contractCreator, newAccount, Mask, paymaster.address, normalProvider);
     const MaskBalanceBefore = await Mask.balanceOf(caller);
 
     await ctf.connect(etherProvider.getSigner(caller)).captureFlag();

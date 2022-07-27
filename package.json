@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "license": "MIT",
   "scripts": {
-    "ui": "npx hardhat test test/demoSetup.ts --network localhost && npx browserify ./ui/index.js > ./ui/bundle.js",
+    "ui": "ts-node ./Scripts/setUpEnv.ts && npx browserify ./ui/index.js > ./ui/bundle.js",
     "test": "hardhat test --network localhost",
     "coverage": "hardhat coverage",
     "lint": "hardhat check",
